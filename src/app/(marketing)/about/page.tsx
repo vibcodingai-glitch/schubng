@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +11,6 @@ import {
     CheckCircle2,
     Heart,
     Linkedin,
-    ArrowRight,
 } from "lucide-react";
 
 export default function AboutPage() {
@@ -227,10 +227,12 @@ export default function AboutPage() {
                         ].map((member, i) => (
                             <Card key={i} className="overflow-hidden border-none shadow-sm group hover:shadow-lg transition-shadow">
                                 <div className="h-56 bg-gradient-to-br from-blue-50 to-slate-100 relative overflow-hidden">
-                                    <img
+                                    <Image
                                         src={member.image}
                                         alt={member.name}
-                                        className="w-full h-full object-cover object-top"
+                                        fill
+                                        className="object-cover object-top"
+                                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                                     />
                                 </div>
                                 <CardContent className="p-6 text-center relative">

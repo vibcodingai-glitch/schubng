@@ -32,9 +32,7 @@ export const authConfig = {
         session({ session, token }) {
             if (token && session.user) {
                 session.user.id = token.id as string;
-                // @ts-ignore
                 session.user.firstName = token.firstName as string;
-                // @ts-ignore
                 session.user.lastName = token.lastName as string;
             }
             return session;

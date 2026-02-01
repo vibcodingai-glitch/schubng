@@ -21,6 +21,7 @@ import { signOutUser } from "@/lib/actions/auth.actions";
 
 export function DashboardHeader() {
     const [query, setQuery] = useState("");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [results, setResults] = useState<any[]>([]);
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);

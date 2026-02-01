@@ -25,13 +25,13 @@ interface SearchResult {
     firstName: string;
     lastName: string;
     email: string;
-    headline?: string;
-    currentRole?: string;
-    currentCompany?: string;
-    location?: string;
-    profilePhotoUrl?: string;
+    headline?: string | null;
+    currentRole?: string | null;
+    currentCompany?: string | null;
+    location?: string | null;
+    profilePhotoUrl?: string | null;
     trustScore: number;
-    industry?: string;
+    industry?: string | null;
     skills: string[];
 }
 
@@ -199,7 +199,7 @@ function SearchPageContent() {
                                             <div className="flex items-start gap-4">
                                                 {/* Avatar */}
                                                 <Avatar className="w-16 h-16 border-2 border-white shadow-md group-hover:shadow-lg transition-shadow">
-                                                    <AvatarImage src={user.profilePhotoUrl} />
+                                                    <AvatarImage src={user.profilePhotoUrl || undefined} />
                                                     <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-lg font-semibold">
                                                         {user.firstName?.[0]}{user.lastName?.[0]}
                                                     </AvatarFallback>

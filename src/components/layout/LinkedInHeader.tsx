@@ -36,7 +36,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOutUser } from "@/lib/actions/auth.actions";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+interface NavItem {
+    href: string;
+    label: string;
+    icon: any;
+    badge?: boolean;
+}
+
+const navItems: NavItem[] = [
     { href: "/dashboard", label: "Home", icon: Home },
     { href: "/dashboard/network", label: "My Network", icon: Users },
     { href: "/dashboard/certifications", label: "Certifications", icon: Award },
@@ -59,9 +66,9 @@ export interface LinkedInHeaderProps {
     user?: {
         firstName?: string;
         lastName?: string;
-        headline?: string;
-        profilePhotoUrl?: string;
-        currentRole?: string;
+        headline?: string | null;
+        profilePhotoUrl?: string | null;
+        currentRole?: string | null;
     };
 }
 

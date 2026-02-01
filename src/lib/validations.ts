@@ -62,7 +62,7 @@ export const loginSchema = z.object({
     password: z.string()
         .min(1, "Password is required"),
 
-    rememberMe: z.boolean().default(false),
+    rememberMe: z.boolean().optional(),
 });
 
 // Certification Upload Validation Schema

@@ -133,7 +133,7 @@ export default function DiscoverPage() {
         if (key === "query") return false;
         if (key === "state" || key === "industry" || key === "role") return value !== "all";
         if (key === "verifiedOnly") return value === true;
-        if (key === "trustScoreMin") return value > 0;
+        if (key === "trustScoreMin") return typeof value === 'number' && value > 0;
         return false;
     }).length;
 

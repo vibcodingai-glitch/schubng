@@ -263,6 +263,11 @@ export async function searchUsers(query: string) {
                 profilePhotoUrl: true,
                 currentRole: true,
                 currentCompany: true,
+                trustScore: true,
+                skills: true,
+                email: true,
+                industry: true,
+                location: true,
             },
             take: 10,
         });

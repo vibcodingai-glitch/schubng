@@ -10,7 +10,6 @@ import {
     TrendingUp,
     AlertCircle,
     ArrowRight,
-    MoreHorizontal,
     FileText,
     Download
 } from "lucide-react";

@@ -20,9 +20,6 @@ import {
     Download,
     Copy,
     Clock,
-    Flag,
-    Save,
-    AlertTriangle,
     Loader2
 } from "lucide-react";
 import Link from "next/link";
@@ -31,6 +28,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 
 interface VerificationDetailProps {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     request: any; // Type strictly later
 }
 
@@ -80,7 +78,7 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
                 toast({ title: "Success", description: result.success });
                 router.push("/admin/verifications");
             }
-        } catch (error) {
+        } catch {
             toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
         } finally {
             setIsSubmitting(false);

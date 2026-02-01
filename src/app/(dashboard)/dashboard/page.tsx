@@ -370,7 +370,7 @@ export default function DashboardPage() {
                                             <div className="flex items-start gap-2">
                                                 <Link href={`/p/${item.user.id}`}>
                                                     <Avatar className="h-12 w-12 border">
-                                                        <AvatarImage src={item.user.avatar} />
+                                                        <AvatarImage src={item.user.avatar || undefined} />
                                                         <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
                                                             {item.user.name?.[0]}
                                                         </AvatarFallback>

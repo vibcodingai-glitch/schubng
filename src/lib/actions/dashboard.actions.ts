@@ -26,6 +26,12 @@ export async function getDashboardData() {
                 },
                 education: {
                     orderBy: { startYear: "desc" }
+                },
+                _count: {
+                    select: {
+                        followers: true,
+                        following: true
+                    }
                 }
             }
         });

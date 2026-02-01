@@ -20,7 +20,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { baseToast, useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Lock, Bell, User, Shield, LogOut, AlertTriangle, Eye, Globe, Mail, Smartphone, Download, Cookie, Laptop } from "lucide-react";
 import { getDashboardData } from "@/lib/actions/dashboard.actions";
 

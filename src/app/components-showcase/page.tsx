@@ -15,7 +15,7 @@ import {
 } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+
 import {
     Users,
     FileText,
@@ -35,7 +35,7 @@ export default function ComponentShowcase() {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-    const sampleUser = mockUsers[0];
+
     const sampleCert = mockCertifications[0];
 
     return (
@@ -226,7 +226,6 @@ export default function ComponentShowcase() {
                                 maxSize={5 * 1024 * 1024} // 5MB
                                 onUpload={(file) => {
                                     setSelectedFile(file);
-                                    console.log("File uploaded:", file);
                                 }}
                             />
                             {selectedFile && (
