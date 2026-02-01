@@ -79,17 +79,15 @@ export function FeedCard({ item }: FeedCardProps) {
     };
 
     const handleToggleComments = async () => {
-        console.log("Toggle comments clicked", item.id, "Current state:", showComments);
         if (!showComments) {
             setShowComments(true);
             if (comments.length === 0) {
                 setLoadingComments(true);
                 try {
                     const fetchedComments = await getPostComments(item.id);
-                    console.log("Fetched comments:", fetchedComments);
                     setComments(fetchedComments || []);
                 } catch (error) {
-                    console.error("Error fetching comments in component:", error);
+                    console.error("Error fetching comments:", error);
                 } finally {
                     setLoadingComments(false);
                 }
