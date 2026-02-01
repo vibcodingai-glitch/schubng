@@ -1,0 +1,9 @@
+# Prettier Ignore
+node_modules/
+.next/
+out/
+build/
+src/generated/
+*.md
+*.json
+*.lock

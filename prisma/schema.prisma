@@ -1,0 +1,242 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+}
+
+enum UserPlan {
+  FREE
+  VERIFIED_PRO
+}
+
+enum CertStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum TransactionType {
+  SUBSCRIPTION
+  VERIFICATION_CREDIT
+}
+
+enum TransactionStatus {
+  SUCCESSFUL
+  PENDING
+  FAILED
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String?   @map("password_hash")
+  firstName       String    @map("first_name")
+  lastName        String    @map("last_name")
+  headline        String?
+  summary         String?
+  bio             String?
+  phone           String?
+  location        String?
+  profilePhotoUrl String?   @map("profile_photo_url")
+  linkedinUrl     String?   @map("linkedin_url")
+  yearsOfExperience String? @map("years_of_experience")
+  industry        String?
+  currentRole     String?   @map("current_role")
+  currentCompany  String?   @map("current_company")
+  skills          String[]  @default([])
+  trustScore      Int       @default(0) @map("trust_score")
+  plan            UserPlan  @default(FREE)
+  role            Role      @default(USER)
+  isPublic        Boolean   @default(true) @map("is_public")
+  
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  lastLoginAt     DateTime? @map("last_login_at")
+
+  certifications   Certification[]
+  education        Education[]
+  workExperience   WorkExperience[]
+  transactions     Transaction[]
+  activityLogs     ActivityLog[]
+  verificationReqs VerificationRequest[] @relation("AdminVerifier")
+  
+  posts            Post[]
+  comments         Comment[]
+  likes            Like[]
+
+  // Connections (Followers/Following)
+  followers        Connection[]      @relation("UserFollowers")
+  following        Connection[]      @relation("UserFollowing")
+
+  @@map("users")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Certification {
+  id                  String     @id @default(uuid())
+  userId              String     @map("user_id")
+  title               String
+  issuingOrganization String     @map("issuing_organization")
+  credentialId        String?    @map("credential_id")
+  issueDate           DateTime   @map("issue_date")
+  expiryDate          DateTime?  @map("expiry_date")
+  documentUrl         String?    @map("document_url")
+  status              CertStatus @default(PENDING)
+  rejectionReason     String?    @map("rejection_reason")
+  verifiedAt          DateTime?  @map("verified_at")
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
+
+  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationRequests VerificationRequest[]
+
+  @@map("certifications")
+}
+
+model Education {
+  id           String      @id @default(uuid())
+  userId       String      @map("user_id")
+  institution  String
+  degree       String
+  fieldOfStudy String      @map("field_of_study")
+  startYear    Int         @map("start_year")
+  endYear      Int?        @map("end_year")
+  documentUrl  String?     @map("document_url")
+  status       CertStatus  @default(PENDING)
+  verifiedAt   DateTime?   @map("verified_at")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  
+  user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("education")
+}
+
+model WorkExperience {
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
+  company     String
+  role        String
+  location    String?
+  startDate   DateTime    @map("start_date")
+  endDate     DateTime?   @map("end_date")
+  isCurrent   Boolean     @default(false) @map("is_current")
+  description String?
+  documentUrl String?     @map("document_url")
+  status      CertStatus  @default(PENDING)
+  verifiedAt  DateTime?   @map("verified_at")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("work_experiences")
+}
+
+model VerificationRequest {
+  id              String   @id @default(uuid())
+  certificationId String   @map("certification_id")
+  assignedAdminId String?  @map("assigned_admin_id")
+  status          String   @default("QUEUED") // QUEUED, IN_REVIEW, COMPLETED
+  notes           String?
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  certification   Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+  assignedAdmin   User?         @relation("AdminVerifier", fields: [assignedAdminId], references: [id])
+
+  @@map("verification_requests")
+}
+
+model Transaction {
+  id          String            @id @default(uuid())
+  userId      String            @map("user_id")
+  amount      Decimal           @db.Decimal(10, 2)
+  currency    String            @default("NGN")
+  type        TransactionType
+  status      TransactionStatus
+  reference   String            @unique
+  description String?
+  createdAt   DateTime          @default(now()) @map("created_at")
+
+  user        User              @relation(fields: [userId], references: [id])
+
+  @@map("transactions")
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  actionType  String   @map("action_type") // PROFILE_UPDATE, CERT_UPLOAD, etc.
+  description String
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("activity_logs")
+}
+
+model Connection {
+  id          String   @id @default(uuid())
+  followerId  String   @map("follower_id")
+  followingId String   @map("following_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+  @@map("connections")
+}
+
+model Post {
+  id        String   @id @default(uuid())
+  authorId  String   @map("author_id")
+  content   String?
+  imageUrl  String?  @map("image_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  repostId  String?  @map("repost_id")
+  originalPost Post? @relation("Reposts", fields: [repostId], references: [id])
+  reposts      Post[] @relation("Reposts")
+
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+  likes     Like[]
+
+  @@map("posts")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  authorId  String   @map("author_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
+}
+
+model Like {
+  id        String   @id @default(uuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@map("likes")
+}
