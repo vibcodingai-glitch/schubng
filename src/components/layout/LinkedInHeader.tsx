@@ -69,6 +69,7 @@ export interface LinkedInHeaderProps {
         headline?: string | null;
         profilePhotoUrl?: string | null;
         currentRole?: string | null;
+        role?: string;
     };
 }
 
@@ -186,6 +187,26 @@ export function LinkedInHeader({ user }: LinkedInHeaderProps) {
 
                     {/* Center/Right: Navigation Icons */}
                     <nav className="hidden md:flex items-center">
+                        {/* Admin Tab */}
+                        {user?.role === "ADMIN" && (
+                            <Link
+                                href="/admin"
+                                className={cn(
+                                    "flex flex-col items-center justify-center min-w-[80px] h-[52px] px-3 border-b-2 transition-colors",
+                                    pathname.startsWith("/admin")
+                                        ? "border-gray-900 text-gray-900"
+                                        : "border-transparent text-gray-500 hover:text-gray-900"
+                                )}
+                            >
+                                <div className="relative">
+                                    <div className="w-6 h-6 flex items-center justify-center rounded-sm bg-slate-800 text-white font-bold text-[10px]">
+                                        A
+                                    </div>
+                                </div>
+                                <span className="text-xs mt-0.5">Admin</span>
+                            </Link>
+                        )}
+
                         {navItems.map((item) => {
                             const Icon = item.icon;
                             const active = isActive(item.href);

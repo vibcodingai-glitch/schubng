@@ -165,6 +165,7 @@ export async function addWorkExperience(data: any) {
         });
 
         revalidatePath("/dashboard/profile");
+        await updateUserTrustScore(authUser.id);
         return { success: "Experience added successfully" };
     } catch (error) {
         console.error("Error adding experience:", error);
@@ -184,6 +185,7 @@ export async function deleteWorkExperience(id: string) {
         });
 
         revalidatePath("/dashboard/profile");
+        await updateUserTrustScore(authUser.id);
         return { success: "Experience deleted successfully" };
     } catch (error) {
         console.error("Error deleting experience:", error);
@@ -215,6 +217,7 @@ export async function addEducation(data: any) {
         });
 
         revalidatePath("/dashboard/profile");
+        await updateUserTrustScore(authUser.id);
         return { success: "Education added successfully" };
     } catch (error) {
         console.error("Error adding education:", error);
@@ -234,6 +237,7 @@ export async function deleteEducation(id: string) {
         });
 
         revalidatePath("/dashboard/profile");
+        await updateUserTrustScore(authUser.id);
         return { success: "Education deleted successfully" };
     } catch (error) {
         console.error("Error deleting education:", error);
@@ -278,12 +282,33 @@ export async function searchUsers(query: string) {
     }
 }
 
-export async function getPublicUserProfile(userId: string) {
-    if (!userId) return null;
+export async function getPublicUserProfile(identifier: string) {
+    if (!identifier) return null;
     const supabase = await createClient();
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
     try {
+        let userId = identifier;
+
+        // Check if input is a UUID
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(identifier);
+
+        if (!isUUID) {
+            // Try to find user by firstName (acting as username for now)
+            const userByName = await prisma.user.findFirst({
+                where: {
+                    firstName: { equals: identifier, mode: 'insensitive' }
+                },
+                select: { id: true }
+            });
+
+            if (userByName) {
+                userId = userByName.id;
+            } else {
+                return null;
+            }
+        }
+
         const user = await prisma.user.findUnique({
             where: { id: userId },
             include: {
@@ -321,6 +346,9 @@ export async function getPublicUserProfile(userId: string) {
             isConnected = !!connection;
         }
 
+        // Calculate trust score on the fly to ensure consistency
+        const breakdown = await calculateTrustScore(user.id);
+
         // Transform to the shape expected by PublicProfileClient
         return {
             username: user.id, // Using ID as username for now
@@ -330,14 +358,14 @@ export async function getPublicUserProfile(userId: string) {
             location: user.location || "",
             memberSince: user.createdAt.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
             about: user.summary || "",
-            isConnected,
-            connectionsCount: user._count.followers,
+            connectionsCount: user._count.following,
             trustScore: {
-                score: user.trustScore,
-                level: user.trustScore > 80 ? "Excellent" : user.trustScore > 60 ? "Good" : "Growing",
-                color: user.trustScore > 80 ? "text-blue-600" : "text-emerald-500",
-                bg: user.trustScore > 80 ? "bg-blue-600" : "bg-emerald-500"
+                score: breakdown.totalScore,
+                level: breakdown.level,
+                color: breakdown.totalScore >= 80 ? "text-blue-600" : breakdown.totalScore >= 60 ? "text-emerald-600" : "text-emerald-500",
+                bg: breakdown.totalScore >= 80 ? "bg-blue-600" : breakdown.totalScore >= 60 ? "bg-emerald-600" : "bg-emerald-500"
             },
+            trustScoreBreakdown: breakdown,
             verified: user.plan === "VERIFIED_PRO", // or based on trust score
             certifications: user.certifications.map(c => ({
                 id: c.id,

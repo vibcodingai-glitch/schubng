@@ -14,7 +14,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { usePathname } from "next/navigation";
 
-export function AdminHeader({ onMenuClick }: { onMenuClick?: () => void }) {
+export function AdminHeader({ onMenuClick, user }: { onMenuClick?: () => void; user?: any }) {
     const pathname = usePathname();
 
     // Simple breadcrumb logic
@@ -53,17 +53,19 @@ export function AdminHeader({ onMenuClick }: { onMenuClick?: () => void }) {
                     <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                             <Avatar className="h-8 w-8">
-                                <AvatarImage src="https://github.com/shadcn.png" alt="Admin" />
-                                <AvatarFallback>JA</AvatarFallback>
+                                <AvatarImage src={user?.profilePhotoUrl || undefined} alt="Admin" />
+                                <AvatarFallback>
+                                    {user?.firstName?.[0]}{user?.lastName?.[0]}
+                                </AvatarFallback>
                             </Avatar>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent className="w-56" align="end" forceMount>
                         <DropdownMenuLabel className="font-normal">
                             <div className="flex flex-col space-y-1">
-                                <p className="text-sm font-medium leading-none">John Admin</p>
+                                <p className="text-sm font-medium leading-none">{user?.firstName} {user?.lastName}</p>
                                 <p className="text-xs leading-none text-muted-foreground">
-                                    john@chaincred.com
+                                    {user?.email}
                                 </p>
                             </div>
                         </DropdownMenuLabel>
@@ -71,7 +73,9 @@ export function AdminHeader({ onMenuClick }: { onMenuClick?: () => void }) {
                         <DropdownMenuItem>Profile</DropdownMenuItem>
                         <DropdownMenuItem>Settings</DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">Log out</DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600" onClick={() => import("@/lib/actions/auth.actions").then(mod => mod.signOutUser())}>
+                            Log out
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </div>

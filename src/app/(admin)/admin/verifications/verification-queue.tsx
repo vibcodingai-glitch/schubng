@@ -19,15 +19,29 @@ import {
     Filter,
     Download,
     RefreshCw,
-    Flag,
     Clock,
 } from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 
+interface VerificationQueueItem {
+    id: string;
+    createdAt: Date;
+    status: string;
+    type: string;
+    title: string;
+    issuer: string;
+    user: {
+        firstName: string;
+        lastName: string;
+        email: string;
+        profilePhoto: string | null;
+    };
+}
+
 interface VerificationQueueProps {
-    queue: any[];
+    queue: VerificationQueueItem[];
 }
 
 export function VerificationQueue({ queue }: VerificationQueueProps) {
@@ -36,9 +50,8 @@ export function VerificationQueue({ queue }: VerificationQueueProps) {
 
     // Filter logic
     const filteredQueue = queue.filter(item => {
-        // Tab filter (mock logic for now since we fetch only QUEUED)
+        // Tab filter
         if (activeTab === "urgent") {
-            // Logic to check date > 48hrs
             const diff = new Date().getTime() - new Date(item.createdAt).getTime();
             const hours = diff / (1000 * 60 * 60);
             return hours > 48;
@@ -48,10 +61,11 @@ export function VerificationQueue({ queue }: VerificationQueueProps) {
         if (search) {
             const lowerSearch = search.toLowerCase();
             return (
-                item.certification.user.firstName.toLowerCase().includes(lowerSearch) ||
-                item.certification.user.lastName.toLowerCase().includes(lowerSearch) ||
-                item.certification.user.email.toLowerCase().includes(lowerSearch) ||
-                item.certification.name.toLowerCase().includes(lowerSearch)
+                item.user.firstName.toLowerCase().includes(lowerSearch) ||
+                item.user.lastName.toLowerCase().includes(lowerSearch) ||
+                item.user.email.toLowerCase().includes(lowerSearch) ||
+                item.title.toLowerCase().includes(lowerSearch) ||
+                item.issuer.toLowerCase().includes(lowerSearch)
             );
         }
         return true;
@@ -76,7 +90,7 @@ export function VerificationQueue({ queue }: VerificationQueueProps) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" className="gap-2">
+                    <Button variant="outline" size="sm" className="gap-2" onClick={() => window.location.reload()}>
                         <RefreshCw className="w-4 h-4" /> Refresh
                     </Button>
                     <Button variant="outline" size="sm" className="gap-2">
@@ -100,7 +114,7 @@ export function VerificationQueue({ queue }: VerificationQueueProps) {
                         <div className="relative flex-1 sm:w-64">
                             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                             <Input
-                                placeholder="Search user or certification..."
+                                placeholder="Search user or item..."
                                 className="pl-9 h-9"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -122,7 +136,7 @@ export function VerificationQueue({ queue }: VerificationQueueProps) {
                                         <input type="checkbox" className="rounded border-slate-300" />
                                     </TableHead>
                                     <TableHead>User</TableHead>
-                                    <TableHead>Certification</TableHead>
+                                    <TableHead>Item</TableHead>
                                     <TableHead>Submitted</TableHead>
                                     <TableHead>Waiting</TableHead>
                                     <TableHead>Status</TableHead>
@@ -144,19 +158,24 @@ export function VerificationQueue({ queue }: VerificationQueueProps) {
                                             <TableCell>
                                                 <div className="flex items-center gap-3">
                                                     <Avatar className="h-8 w-8">
-                                                        <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
-                                                            {item.certification.user.firstName[0]}{item.certification.user.lastName[0]}
-                                                        </AvatarFallback>
+                                                        {item.user.profilePhoto ? (
+                                                            <img src={item.user.profilePhoto} alt={item.user.firstName} className="object-cover h-full w-full" />
+                                                        ) : (
+                                                            <AvatarFallback className="bg-slate-100 text-slate-600 text-xs">
+                                                                {item.user.firstName[0]}{item.user.lastName[0]}
+                                                            </AvatarFallback>
+                                                        )}
                                                     </Avatar>
                                                     <div>
-                                                        <div className="font-medium text-slate-900">{item.certification.user.firstName} {item.certification.user.lastName}</div>
-                                                        <div className="text-xs text-slate-500">{item.certification.user.email}</div>
+                                                        <div className="font-medium text-slate-900">{item.user.firstName} {item.user.lastName}</div>
+                                                        <div className="text-xs text-slate-500">{item.user.email}</div>
                                                     </div>
                                                 </div>
                                             </TableCell>
                                             <TableCell>
-                                                <div className="font-medium text-slate-900">{item.certification.name}</div>
-                                                <div className="text-xs text-slate-500">{item.certification.issuingOrganization}</div>
+                                                <div className="font-medium text-slate-900">{item.title}</div>
+                                                <div className="text-xs text-slate-500">{item.issuer}</div>
+                                                <Badge variant="outline" className="mt-1 text-[10px] px-1 py-0 h-4">{item.type}</Badge>
                                             </TableCell>
                                             <TableCell className="text-sm text-slate-500">
                                                 {submittedDate.toLocaleDateString()}

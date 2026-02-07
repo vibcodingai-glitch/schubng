@@ -315,26 +315,26 @@ export default function PublicProfileClient({ profile }: PublicProfileProps) {
                             <CardContent className="space-y-4">
                                 <div className="flex items-center justify-between text-sm">
                                     <span className="text-slate-600">Verified Certifications</span>
-                                    <span className="font-medium text-emerald-600">35/40 pts</span>
+                                    <span className="font-medium text-emerald-600">{profile.trustScoreBreakdown?.certificationScore || 0}/30 pts</span>
                                 </div>
                                 <div className="w-full bg-slate-100 rounded-full h-2">
-                                    <div className="bg-emerald-500 h-2 rounded-full" style={{ width: '87.5%' }}></div>
+                                    <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${(profile.trustScoreBreakdown?.certificationScore || 0) / 30 * 100}%` }}></div>
                                 </div>
 
                                 <div className="flex items-center justify-between text-sm">
-                                    <span className="text-slate-600">Profile Completeness</span>
-                                    <span className="font-medium text-blue-600">18/20 pts</span>
+                                    <span className="text-slate-600">Verified Education</span>
+                                    <span className="font-medium text-blue-600">{profile.trustScoreBreakdown?.educationScore || 0}/35 pts</span>
                                 </div>
                                 <div className="w-full bg-slate-100 rounded-full h-2">
-                                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: '90%' }}></div>
+                                    <div className="bg-blue-500 h-2 rounded-full" style={{ width: `${(profile.trustScoreBreakdown?.educationScore || 0) / 35 * 100}%` }}></div>
                                 </div>
 
-                                <div className="flex items-center justify-between text-sm opacity-60">
+                                <div className="flex items-center justify-between text-sm">
                                     <span className="text-slate-600">Verified Experience</span>
-                                    <span className="font-medium text-slate-500">0/20 pts</span>
+                                    <span className="font-medium text-slate-500">{profile.trustScoreBreakdown?.experienceScore || 0}/35 pts</span>
                                 </div>
-                                <div className="w-full bg-slate-100 rounded-full h-2 opacity-60">
-                                    <div className="bg-slate-300 h-2 rounded-full" style={{ width: '0%' }}></div>
+                                <div className="w-full bg-slate-100 rounded-full h-2">
+                                    <div className="bg-slate-300 h-2 rounded-full" style={{ width: `${(profile.trustScoreBreakdown?.experienceScore || 0) / 35 * 100}%` }}></div>
                                 </div>
 
                                 <div className="pt-4 border-t border-slate-100">

@@ -60,7 +60,10 @@ export default function DashboardPage() {
             setLoading(true);
             try {
                 const dashboardData = await getDashboardData();
-                setUserProfile(dashboardData?.user);
+                setUserProfile({
+                    ...dashboardData?.user,
+                    stats: dashboardData?.stats
+                });
 
                 const networkConnections = await getNetworkData();
                 setConnections(networkConnections || []);
@@ -86,7 +89,19 @@ export default function DashboardPage() {
                     congratulations: post.likesCount,
                     comments: post.commentsCount,
                     createdAt: post.createdAt,
-                    liked: post.isLiked
+                    liked: post.isLiked,
+                    originalPost: post.originalPost ? {
+                        author: {
+                            id: post.originalPost.author.id,
+                            firstName: post.originalPost.author.firstName,
+                            lastName: post.originalPost.author.lastName,
+                            profilePhotoUrl: post.originalPost.author.profilePhotoUrl,
+                            headline: post.originalPost.author.headline
+                        },
+                        content: post.originalPost.content,
+                        imageUrl: post.originalPost.imageUrl,
+                        createdAt: post.originalPost.createdAt
+                    } : undefined
                 }));
 
                 setFeedItems(transformedFeed);
@@ -245,14 +260,20 @@ export default function DashboardPage() {
                         </div>
                         <Separator />
                         <div className="p-3 space-y-1 text-xs">
-                            <Link href="/dashboard/overview" className="flex justify-between hover:bg-gray-100 -mx-3 px-3 py-2 transition-colors">
+                            <div
+                                onClick={() => toast({ title: "Profile Analytics", description: "Real-time profile views." })}
+                                className="flex justify-between hover:bg-gray-100 -mx-3 px-3 py-2 transition-colors cursor-pointer"
+                            >
                                 <span className="text-gray-600">Profile viewers</span>
-                                <span className="text-blue-600 font-semibold">56</span>
-                            </Link>
-                            <Link href="/dashboard/overview" className="flex justify-between hover:bg-gray-100 -mx-3 px-3 py-2 transition-colors">
+                                <span className="text-blue-600 font-semibold">{userProfile.stats?.profileViews || 0}</span>
+                            </div>
+                            <div
+                                onClick={() => toast({ title: "Post Analytics", description: "Total impressions across all your posts." })}
+                                className="flex justify-between hover:bg-gray-100 -mx-3 px-3 py-2 transition-colors cursor-pointer"
+                            >
                                 <span className="text-gray-600">Post impressions</span>
-                                <span className="text-blue-600 font-semibold">69</span>
-                            </Link>
+                                <span className="text-blue-600 font-semibold">{userProfile.stats?.totalImpressions || 0}</span>
+                            </div>
                         </div>
                     </Card>
 
@@ -266,14 +287,20 @@ export default function DashboardPage() {
                                 <span className="font-semibold text-sm text-gray-900">SupplyChain Hub</span>
                             </div>
                             <div className="grid grid-cols-2 gap-2 text-xs">
-                                <Link href="#" className="flex justify-between hover:bg-gray-100 p-2 rounded transition-colors">
+                                <div
+                                    onClick={() => toast({ title: "Hub Activity", description: "Activity tracking coming soon." })}
+                                    className="flex justify-between hover:bg-gray-100 p-2 rounded transition-colors cursor-pointer"
+                                >
                                     <span className="text-gray-600">Activity</span>
                                     <span className="text-blue-600 font-semibold">0</span>
-                                </Link>
-                                <Link href="#" className="flex justify-between hover:bg-gray-100 p-2 rounded transition-colors">
+                                </div>
+                                <div
+                                    onClick={() => toast({ title: "Visitor Analytics", description: "Page visitor tracking coming soon." })}
+                                    className="flex justify-between hover:bg-gray-100 p-2 rounded transition-colors cursor-pointer"
+                                >
                                     <span className="text-gray-600">Page visitors</span>
                                     <span className="text-blue-600 font-semibold">0</span>
-                                </Link>
+                                </div>
                             </div>
                             <Separator className="my-2" />
                             <p className="text-xs text-gray-500 mb-2">Grow your business faster</p>
@@ -294,22 +321,31 @@ export default function DashboardPage() {
                     {/* Navigation Links */}
                     <Card className="border-none shadow-sm">
                         <CardContent className="p-3 space-y-1">
-                            <Link href="#" className="flex items-center gap-2 text-xs text-gray-700 hover:text-blue-600 py-1.5">
+                            <div
+                                onClick={() => toast({ title: "Saved Items", description: "You haven't saved any items yet." })}
+                                className="flex items-center gap-2 text-xs text-gray-700 hover:text-blue-600 py-1.5 cursor-pointer"
+                            >
                                 <Bookmark className="w-4 h-4" />
                                 Saved items
-                            </Link>
+                            </div>
                             <Link href="/dashboard/network" className="flex items-center gap-2 text-xs text-gray-700 hover:text-blue-600 py-1.5">
                                 <Users2 className="w-4 h-4" />
                                 Groups
                             </Link>
-                            <Link href="#" className="flex items-center gap-2 text-xs text-gray-700 hover:text-blue-600 py-1.5">
+                            <div
+                                onClick={() => toast({ title: "Newsletters", description: "Newsletter subscription management coming soon." })}
+                                className="flex items-center gap-2 text-xs text-gray-700 hover:text-blue-600 py-1.5 cursor-pointer"
+                            >
                                 <Newspaper className="w-4 h-4" />
                                 Newsletters
-                            </Link>
-                            <Link href="#" className="flex items-center gap-2 text-xs text-gray-700 hover:text-blue-600 py-1.5">
+                            </div>
+                            <div
+                                onClick={() => toast({ title: "Events", description: "No upcoming events scheduled." })}
+                                className="flex items-center gap-2 text-xs text-gray-700 hover:text-blue-600 py-1.5 cursor-pointer"
+                            >
                                 <CalendarDays className="w-4 h-4" />
                                 Events
-                            </Link>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
@@ -362,7 +398,12 @@ export default function DashboardPage() {
                     {/* Feed Posts */}
                     {feedItems.length > 0 ? (
                         feedItems.map((item) => (
-                            <FeedCard key={item.id} item={item} />
+                            <FeedCard
+                                key={item.id}
+                                item={item}
+                                currentUserId={userProfile.id}
+                                onDelete={handleDeletePost}
+                            />
                         ))
                     ) : (
                         <Card className="border-none shadow-sm">

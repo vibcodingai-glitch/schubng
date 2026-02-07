@@ -7,7 +7,7 @@ export async function getDashboardData() {
     const supabase = await createClient();
     const { data: { user: authUser } } = await supabase.auth.getUser();
 
-    if (!authUser) return null;
+    if (!authUser) return { error: "Authentication failed: No user" };
 
     try {
         const user = await prisma.user.findUnique({
@@ -36,40 +36,62 @@ export async function getDashboardData() {
             }
         });
 
-        if (!user) return null;
+        if (!user) return { error: "User not found in database", userId: authUser.id };
 
         // Calculate stats
-        const totalCerts = user.certifications.length; // Note: limited by take: 5 above? No, this is just wrong if fetched this way.
-        // To get accurate counts we should run separate aggregates or fetch all if small.
-        // Better:
-        const stats = await prisma.certification.groupBy({
-            by: ['status'],
-            where: { userId: user.id },
-            _count: true,
-        });
+        let totalCount = 0;
+        let verifiedCount = 0;
+        let pendingCount = 0;
+        let totalImpressions = 0;
+        let userProfileViews = user.profileViews;
 
-        const totalCount = stats.reduce((acc: number, curr: { _count: number }) => acc + curr._count, 0);
-        const verifiedCount = stats.find((s: { status: string, _count: number }) => s.status === "VERIFIED")?._count || 0;
-        const pendingCount = stats.find((s: { status: string, _count: number }) => s.status === "PENDING")?._count || 0;
+        try {
+            const stats = await prisma.certification.groupBy({
+                by: ['status'],
+                where: { userId: user.id },
+                _count: true,
+            });
+
+            totalCount = stats.reduce((acc: number, curr: { _count: number }) => acc + curr._count, 0);
+            verifiedCount = stats.find((s: { status: string, _count: number }) => s.status === "VERIFIED")?._count || 0;
+            pendingCount = stats.find((s: { status: string, _count: number }) => s.status === "PENDING")?._count || 0;
+
+            // Calculate total post impressions
+            // Note: If the schema update hasn't propagated to the running server, this might fail.
+            // We'll try to fetch with impressions, but fallback if it fails.
+            const posts = await prisma.post.findMany({
+                where: { authorId: user.id },
+                // select: { impressions: true } // Removed to avoid runtime error if client is stale
+            });
+            // Manual fallback if impressions field exists on the object (any cast to avoid TS error if types are missing)
+            totalImpressions = posts.reduce((acc, curr: any) => acc + (curr.impressions || 0), 0);
+
+        } catch (statsError) {
+            console.error("Error calculating stats:", statsError);
+            // Continue execution to return user data at least
+        }
 
 
         return {
             user: {
                 ...user,
-                // Sanitize sensitive fields if any
+                profilePhotoUrl: user.profilePhotoUrl,
             },
             stats: {
                 totalCerts: totalCount,
                 verifiedCerts: verifiedCount,
-                pendingCerts: pendingCount
+                pendingCerts: pendingCount,
+                profileViews: userProfileViews,
+                totalImpressions: totalImpressions,
+                searchAppearances: 0
             },
             certifications: user.certifications,
             activity: user.activityLogs
         };
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error fetching dashboard data:", error);
-        return null;
+        return { error: "Exception thrown", details: error.message };
     }
 }
 
@@ -197,21 +219,81 @@ export async function getNetworkFeed() {
                 likes: {
                     where: { userId: authUser?.id || "" },
                     select: { userId: true }
+                },
+                originalPost: {
+                    include: {
+                        author: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                profilePhotoUrl: true,
+                                headline: true
+                            }
+                        }
+                    }
                 }
             }
         });
 
-        // Transform to add "isLiked" boolean
+        // Transform to add "isLiked" boolean and handle reposts
         return posts.map((post: any) => ({
             ...post,
             isLiked: post.likes.length > 0,
             likesCount: post._count.likes,
             commentsCount: post._count.comments,
-            repostsCount: post._count.reposts
+            repostsCount: post._count.reposts,
+            originalPost: post.originalPost
         }));
     } catch (error) {
         console.error("Error fetching network feed:", error);
         return [];
+    }
+}
+
+export async function repostPost(originalPostId: string) {
+    const supabase = await createClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    if (!authUser) return { error: "Unauthorized" };
+
+    try {
+        // Create a new post that references the original post
+        const repost = await prisma.post.create({
+            data: {
+                authorId: authUser.id,
+                repostId: originalPostId,
+                content: "" // Reposts might not have innovative content, or we could allow adding a thought later.
+            },
+            include: {
+                author: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        profilePhotoUrl: true,
+                        headline: true
+                    }
+                },
+                originalPost: {
+                    include: {
+                        author: {
+                            select: {
+                                id: true,
+                                firstName: true,
+                                lastName: true,
+                                profilePhotoUrl: true,
+                                headline: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        return { success: true, post: repost };
+    } catch (error: any) {
+        console.error("Error reposting:", error);
+        return { error: "Failed to repost" };
     }
 }
 

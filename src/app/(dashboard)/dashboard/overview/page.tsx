@@ -149,7 +149,7 @@ export default async function ProfilePage() {
                                         </Link>
                                     </div>
                                     <Link href="/dashboard/network" className="text-sm text-blue-600 hover:underline font-semibold mt-1 inline-block">
-                                        {user._count?.followers || 0} connections
+                                        {user._count?.following || 0} connections
                                     </Link>
                                 </div>
 
@@ -249,14 +249,14 @@ export default async function ProfilePage() {
                             <div className="flex items-start gap-3">
                                 <Users className="w-5 h-5 text-gray-500 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold text-gray-900">56 profile views</p>
+                                    <p className="font-semibold text-gray-900">{stats.profileViews || 0} profile views</p>
                                     <p className="text-xs text-gray-500">Discover who&apos;s viewed your profile.</p>
                                 </div>
                             </div>
                             <div className="flex items-start gap-3">
                                 <BarChart3 className="w-5 h-5 text-gray-500 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold text-gray-900">69 post impressions</p>
+                                    <p className="font-semibold text-gray-900">{stats.totalImpressions} post impressions</p>
                                     <p className="text-xs text-gray-500">Check out who&apos;s engaging with your posts.</p>
                                     <p className="text-xs text-gray-400">Past 7 days</p>
                                 </div>
@@ -264,7 +264,7 @@ export default async function ProfilePage() {
                             <div className="flex items-start gap-3">
                                 <Search className="w-5 h-5 text-gray-500 mt-0.5" />
                                 <div>
-                                    <p className="font-semibold text-gray-900">17 search appearances</p>
+                                    <p className="font-semibold text-gray-900">{stats?.searchAppearances || 0} search appearances</p>
                                     <p className="text-xs text-gray-500">See how often you appear in search results.</p>
                                 </div>
                             </div>

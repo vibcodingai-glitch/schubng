@@ -25,6 +25,7 @@ export const authConfig = {
                 token.id = user.id;
                 token.firstName = user.firstName;
                 token.lastName = user.lastName;
+                token.role = user.role;
                 // Add other custom fields
             }
             return token;
@@ -34,6 +35,7 @@ export const authConfig = {
                 session.user.id = token.id as string;
                 session.user.firstName = token.firstName as string;
                 session.user.lastName = token.lastName as string;
+                session.user.role = token.role as string;
             }
             return session;
         }

@@ -13,7 +13,13 @@ const navItems = [
     { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-export function MobileBottomNav() {
+interface MobileBottomNavProps {
+    user?: {
+        role?: string;
+    };
+}
+
+export function MobileBottomNav({ user }: MobileBottomNavProps) {
     const pathname = usePathname();
 
     return (
@@ -39,6 +45,24 @@ export function MobileBottomNav() {
                         </Link>
                     );
                 })}
+
+                {/* Admin Tab for Mobile */}
+                {user?.role === "ADMIN" && (
+                    <Link
+                        href="/admin"
+                        className={cn(
+                            "flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors",
+                            pathname.startsWith("/admin")
+                                ? "text-blue-600"
+                                : "text-slate-500 hover:text-slate-900"
+                        )}
+                    >
+                        <div className="w-5 h-5 flex items-center justify-center rounded-sm bg-slate-800 text-white font-bold text-[10px]">
+                            A
+                        </div>
+                        <span className="text-xs font-medium">Admin</span>
+                    </Link>
+                )}
             </nav>
         </div>
     );

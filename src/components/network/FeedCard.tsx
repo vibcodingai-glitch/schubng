@@ -1,4 +1,5 @@
-"use client";
+
+import { useToast } from "@/components/ui/use-toast";
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,6 +18,12 @@ import {
     X
 } from "lucide-react";
 import Link from "next/link";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export interface FeedItem {
     id: string;
@@ -36,16 +43,31 @@ export interface FeedItem {
     comments?: number;
     createdAt: string;
     liked?: boolean;
+    originalPost?: {
+        author: {
+            id: string;
+            firstName: string;
+            lastName: string;
+            profilePhotoUrl?: string | null;
+            headline?: string | null;
+        };
+        content?: string | null;
+        imageUrl?: string | null;
+        createdAt: Date;
+    };
 }
 
 interface FeedCardProps {
     item: FeedItem;
+    currentUserId?: string;
+    onDelete?: (postId: string) => void;
 }
 
-import { addComment, getPostComments } from "@/lib/actions/dashboard.actions";
+import { addComment, getPostComments, repostPost } from "@/lib/actions/dashboard.actions";
 import { Input } from "@/components/ui/input";
 
-export function FeedCard({ item }: FeedCardProps) {
+export function FeedCard({ item, currentUserId, onDelete }: FeedCardProps) {
+    const { toast } = useToast();
     const [isLiked, setIsLiked] = React.useState(item.liked || false);
     const [localLikes, setLocalLikes] = React.useState(item.congratulations || 0);
 
@@ -111,6 +133,28 @@ export function FeedCard({ item }: FeedCardProps) {
         }
     };
 
+    const handleRepost = async () => {
+        try {
+            const result = await repostPost(item.id);
+            if (result.success) {
+                toast({
+                    title: "Reposted",
+                    description: "This post has been shared to your feed.",
+                });
+                // Ideally reload or update state, for now toast is good confirmation of action
+                window.location.reload();
+            } else {
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: result.error || "Failed to repost",
+                });
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
     return (
         <Card>
             <CardContent className="p-0">
@@ -133,9 +177,28 @@ export function FeedCard({ item }: FeedCardProps) {
                             <p className="text-xs text-gray-400 mt-0.5">{getTimeAgo()} • 🌍</p>
                         </div>
                     </div>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                    {currentUserId === item.user.id && onDelete ? (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                    className="text-red-600 focus:text-red-600 cursor-pointer"
+                                    onClick={() => onDelete(item.id)}
+                                >
+                                    <X className="mr-2 h-4 w-4" />
+                                    Delete Post
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    ) : (
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
 
                 {/* Content */}
@@ -147,6 +210,45 @@ export function FeedCard({ item }: FeedCardProps) {
                                     {item.data.content}
                                 </p>
                             )}
+
+                            {/* Render Reposted Content */}
+                            {item.originalPost && (
+                                <div className="border border-gray-200 rounded-lg p-3 bg-gray-50/50">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <Avatar className="h-8 w-8">
+                                            <AvatarImage src={item.originalPost.author.profilePhotoUrl || undefined} />
+                                            <AvatarFallback className="text-xs">
+                                                {item.originalPost.author.firstName?.[0]}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div>
+                                            <p className="text-xs font-semibold text-gray-900">
+                                                {item.originalPost.author.firstName} {item.originalPost.author.lastName}
+                                            </p>
+                                            <p className="text-[10px] text-gray-500 line-clamp-1">
+                                                {item.originalPost.author.headline}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {item.originalPost.content && (
+                                        <p className="text-sm text-gray-800 whitespace-pre-wrap mb-2">
+                                            {item.originalPost.content}
+                                        </p>
+                                    )}
+
+                                    {item.originalPost.imageUrl && (
+                                        <div className="rounded-lg overflow-hidden border border-gray-200">
+                                            <img
+                                                src={item.originalPost.imageUrl}
+                                                alt="Reposted content"
+                                                className="w-full h-auto object-cover max-h-[300px]"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {item.data.image && (
                                 <div className="rounded-lg overflow-hidden border border-gray-100">
                                     <img
@@ -277,11 +379,29 @@ export function FeedCard({ item }: FeedCardProps) {
                         <MessageCircle className="w-4 h-4 mr-2" />
                         Comment
                     </Button>
-                    <Button variant="ghost" size="sm" className="flex-1 text-gray-600 rounded-none">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 text-gray-600 rounded-none"
+                        onClick={() => {
+                            handleRepost();
+                        }}
+                    >
                         <Repeat2 className="w-4 h-4 mr-2" />
                         Repost
                     </Button>
-                    <Button variant="ghost" size="sm" className="flex-1 text-gray-600 rounded-none">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="flex-1 text-gray-600 rounded-none"
+                        onClick={() => {
+                            navigator.clipboard.writeText(`https://chaincred.com/post/${item.id}`);
+                            toast({
+                                title: "Link Copied",
+                                description: "Post link copied to clipboard.",
+                            });
+                        }}
+                    >
                         <Send className="w-4 h-4 mr-2" />
                         Send
                     </Button>

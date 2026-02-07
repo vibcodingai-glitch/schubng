@@ -23,13 +23,13 @@ import {
     Loader2
 } from "lucide-react";
 import Link from "next/link";
-import { verifyRequest } from "@/lib/actions/admin.actions";
+import { updateVerificationStatus } from "@/lib/actions/admin.actions";
 import { useToast } from "@/components/ui/use-toast";
 import { useRouter } from "next/navigation";
 
 interface VerificationDetailProps {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    request: any; // Type strictly later
+    request: any; // Using the normalized type from action
 }
 
 export function VerificationDetail({ request }: VerificationDetailProps) {
@@ -50,9 +50,8 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
         setChecklist(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
-    const handleAction = async (status: "APPROVED" | "REJECTED") => {
-        if (status === "APPROVED") {
-            // Check if all checklist items are checked (optional enforcement)
+    const handleAction = async (status: "VERIFIED" | "REJECTED") => {
+        if (status === "VERIFIED") {
             const allChecked = Object.values(checklist).every(Boolean);
             if (!allChecked) {
                 const confirm = window.confirm("Not all checklist items are completed. Proceed with approval?");
@@ -71,13 +70,9 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
 
         setIsSubmitting(true);
         try {
-            const result = await verifyRequest(request.id, status, notes);
-            if (result.error) {
-                toast({ title: "Error", description: result.error, variant: "destructive" });
-            } else {
-                toast({ title: "Success", description: result.success });
-                router.push("/admin/verifications");
-            }
+            await updateVerificationStatus(request.id, status, notes);
+            toast({ title: "Success", description: `Request ${status.toLowerCase()} successfully.` });
+            router.push("/admin/verifications");
         } catch {
             toast({ title: "Error", description: "Something went wrong", variant: "destructive" });
         } finally {
@@ -85,8 +80,8 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
         }
     };
 
-    const cert = request.certification;
-    const user = cert.user;
+    const item = request.item;
+    const user = request.user;
 
     // Calculate waiting time
     const submittedDate = new Date(request.createdAt);
@@ -95,6 +90,10 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
     const waitingLabel = waitingTimeHours > 24
         ? `${Math.floor(waitingTimeHours / 24)} days`
         : `${waitingTimeHours} hours`;
+
+    if (!user || !item) {
+        return <div className="p-8">Error loading request details.</div>;
+    }
 
     return (
         <div className="h-[calc(100vh-4rem)] flex flex-col">
@@ -110,11 +109,12 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
                         <Separator orientation="vertical" className="h-6 hidden sm:block" />
                         <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                                <h1 className="font-bold text-slate-900 truncate">{cert.name}</h1>
+                                <h1 className="font-bold text-slate-900 truncate">{item.title}</h1>
                                 <Badge variant="outline" className="bg-slate-100 text-slate-600 whitespace-nowrap">{request.status}</Badge>
+                                <Badge variant="secondary" className="bg-blue-50 text-blue-700">{request.type}</Badge>
                             </div>
                             <div className="text-sm text-slate-500 flex flex-wrap items-center gap-2 mt-1">
-                                <span>For: <span className="font-medium text-slate-900">{user.firstName} {user.lastName}</span></span>
+                                <span>For: <span className="font-medium text-slate-900">{user.name}</span></span>
                                 <span className="hidden sm:inline">•</span>
                                 <span className="flex items-center gap-1 whitespace-nowrap"><Clock className="w-3 h-3" /> Time in queue: {waitingLabel}</span>
                             </div>
@@ -135,8 +135,8 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
                         <Separator orientation="vertical" className="h-6 mx-2" />
                         <Button variant="ghost" size="icon"><RotateCw className="w-4 h-4" /></Button>
                         <Button variant="ghost" size="icon"><Maximize2 className="w-4 h-4" /></Button>
-                        {cert.documentUrl ? (
-                            <a href={cert.documentUrl} target="_blank" download>
+                        {item.documentUrl ? (
+                            <a href={item.documentUrl} target="_blank" download>
                                 <Button variant="ghost" size="icon"><Download className="w-4 h-4" /></Button>
                             </a>
                         ) : null}
@@ -148,14 +148,14 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
                             className="bg-white shadow-lg transition-transform duration-200 origin-center"
                             style={{ width: '600px', height: '800px', transform: `scale(${zoom / 100})` }}
                         >
-                            {cert.documentUrl ? (
+                            {item.documentUrl ? (
                                 <div className="relative w-full h-full">
                                     {/* Using unoptimized because documents might be arbitrary URLs or PDFs previewed as images */}
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img
-                                        src={cert.documentUrl}
-                                        alt="Document"
-                                        className="w-full h-full object-contain"
+                                    <iframe
+                                        src={item.documentUrl}
+                                        title="Document"
+                                        className="w-full h-full"
                                     />
                                 </div>
                             ) : (
@@ -164,18 +164,6 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
                                 </div>
                             )}
                         </div>
-                    </div>
-
-                    {/* OCR Results - Placeholder */}
-                    <div className="bg-white border-t border-slate-200 p-4">
-                        <div className="flex items-center justify-between mb-3">
-                            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-                                <div className="w-2 h-2 bg-slate-300 rounded-full" />
-                                Extracted Information (OCR)
-                            </h3>
-                            <Badge variant="outline" className="text-slate-500">Not Available</Badge>
-                        </div>
-                        <p className="text-xs text-slate-500">OCR extraction is disabled in this environment.</p>
                     </div>
                 </div>
 
@@ -191,67 +179,58 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
                             <CardContent className="text-sm space-y-3">
                                 <div className="flex items-center gap-3">
                                     <Avatar>
-                                        <AvatarFallback>{user.firstName[0]}{user.lastName[0]}</AvatarFallback>
+                                        <AvatarFallback>{user.name.split(' ').map((n: string) => n[0]).join('')}</AvatarFallback>
                                     </Avatar>
                                     <div>
-                                        <div className="font-medium">{user.firstName} {user.lastName}</div>
-                                        <div className="text-slate-500">Joined {new Date(user.createdAt).toLocaleDateString()}</div>
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4 pt-2">
-                                    <div>
-                                        <p className="text-slate-500 text-xs">Email</p>
-                                        <div className="flex items-center gap-1">
-                                            <span className="font-medium truncate">{user.email}</span>
-                                            <Button variant="ghost" size="icon" className="h-4 w-4"><Copy className="w-3 h-3" /></Button>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-500 text-xs">Trust Score</p>
-                                        <span className="font-medium text-emerald-600">{user.trustScore}</span>
+                                        <div className="font-medium">{user.name}</div>
+                                        <div className="text-slate-500">{user.email}</div>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
 
-                        {/* Certification Details */}
+                        {/* Item Details */}
                         <Card>
                             <CardHeader className="pb-3">
-                                <CardTitle className="text-base">Certification Details</CardTitle>
+                                <CardTitle className="text-base">{request.type} Details</CardTitle>
                             </CardHeader>
                             <CardContent className="text-sm space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <p className="text-slate-500 text-xs">Type</p>
-                                        <p className="font-medium">{cert.name}</p>
+                                        <p className="text-slate-500 text-xs">Title/Role</p>
+                                        <p className="font-medium">{item.title}</p>
                                     </div>
                                     <div>
-                                        <p className="text-slate-500 text-xs">Issuing Body</p>
-                                        <p className="font-medium">{cert.issuingOrganization}</p>
+                                        <p className="text-slate-500 text-xs">Organization</p>
+                                        <p className="font-medium">{item.subtitle}</p>
                                     </div>
-                                    <div>
-                                        <p className="text-slate-500 text-xs">Credential ID</p>
-                                        <p className="font-medium font-mono bg-slate-50 px-1 rounded inline-block">{cert.credentialId}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-500 text-xs">Issue Date</p>
-                                        <p className="font-medium">{new Date(cert.issueDate).toLocaleDateString()}</p>
-                                    </div>
-                                </div>
 
-                                <div className="pt-2 space-y-2">
-                                    <p className="text-slate-500 text-xs font-medium uppercase tracking-wider">External Verification</p>
-                                    <div className="flex gap-2">
-                                        {cert.verificationUrl ? (
-                                            <Button variant="outline" size="sm" className="w-full gap-1" asChild>
-                                                <a href={cert.verificationUrl} target="_blank" rel="noopener noreferrer">
-                                                    Open Registry <ExternalLink className="w-3 h-3" />
-                                                </a>
-                                            </Button>
-                                        ) : (
-                                            <div className="text-slate-400 text-sm">No verification URL provided</div>
-                                        )}
-                                    </div>
+                                    {/* Type specific fields */}
+                                    {request.type === 'Certification' && (
+                                        <>
+                                            <div>
+                                                <p className="text-slate-500 text-xs">Credential ID</p>
+                                                <p className="font-medium font-mono bg-slate-50 px-1 rounded inline-block">{item.details?.credentialId || 'N/A'}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-slate-500 text-xs">Issue Date</p>
+                                                <p className="font-medium">{item.details?.issueDate ? new Date(item.details.issueDate).toLocaleDateString() : 'N/A'}</p>
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {request.type === 'Education' && (
+                                        <>
+                                            <div>
+                                                <p className="text-slate-500 text-xs">Degree</p>
+                                                <p className="font-medium">{item.details?.degree || item.title}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-slate-500 text-xs">Year</p>
+                                                <p className="font-medium">{item.details?.startYear} - {item.details?.endYear || 'Present'}</p>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -265,42 +244,25 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
                             <CardContent className="space-y-3">
                                 <div className="flex items-center space-x-2">
                                     <Checkbox id="legible" checked={checklist.legible} onCheckedChange={() => handleCheck('legible')} />
-                                    <label htmlFor="legible" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                        Document is legible and authentic
-                                    </label>
+                                    <label htmlFor="legible" className="text-sm font-medium leading-none">Document is legible</label>
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <Checkbox id="nameMatch" checked={checklist.nameMatch} onCheckedChange={() => handleCheck('nameMatch')} />
-                                    <label htmlFor="nameMatch" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                        Name on document matches profile
-                                    </label>
+                                    <label htmlFor="nameMatch" className="text-sm font-medium leading-none">Name matches profile</label>
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                    <Checkbox id="idValid" checked={checklist.idValid} onCheckedChange={() => handleCheck('idValid')} />
-                                    <label htmlFor="idValid" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                        Credential ID format is valid
-                                    </label>
-                                </div>
+                                {/* Reduced checklist for brevity in this generic view */}
                                 <div className="flex items-center space-x-2">
                                     <Checkbox id="issuerVerified" checked={checklist.issuerVerified} onCheckedChange={() => handleCheck('issuerVerified')} />
-                                    <label htmlFor="issuerVerified" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                        Verified with issuing body registry
-                                    </label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <Checkbox id="notExpired" checked={checklist.notExpired} onCheckedChange={() => handleCheck('notExpired')} />
-                                    <label htmlFor="notExpired" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                                        Certificate is not expired
-                                    </label>
+                                    <label htmlFor="issuerVerified" className="text-sm font-medium leading-none">Verified with issuing body</label>
                                 </div>
                             </CardContent>
                         </Card>
 
                         {/* Internal Notes */}
                         <div className="space-y-2">
-                            <Label>Internal Notes</Label>
+                            <Label>Internal Notes / Rejection Reason</Label>
                             <Textarea
-                                placeholder="Add internal notes about this verification..."
+                                placeholder="Add internal notes..."
                                 value={notes}
                                 onChange={(e) => setNotes(e.target.value)}
                                 className="min-h-[100px]"
@@ -311,19 +273,18 @@ export function VerificationDetail({ request }: VerificationDetailProps) {
                     {/* Sticky Actions Footer */}
                     <div className="p-4 bg-white border-t border-slate-200 sticky bottom-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
                         <div className="grid grid-cols-2 gap-3 mb-3">
-                            {/* Request Info logic not implemented yet */}
-                            <Button variant="outline" className="w-full border-amber-200 text-amber-700 hover:bg-amber-50" disabled>
+                            <Button variant="outline" className="w-full" disabled>
                                 Request More Info
                             </Button>
                             <Button variant="destructive" className="w-full bg-red-50 text-red-600 hover:bg-red-100 border border-red-200" onClick={() => handleAction("REJECTED")} disabled={isSubmitting}>
-                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Reject Verification"}
+                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Reject"}
                             </Button>
                         </div>
 
-                        <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-lg font-medium" onClick={() => handleAction("APPROVED")} disabled={isSubmitting}>
+                        <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 text-lg font-medium" onClick={() => handleAction("VERIFIED")} disabled={isSubmitting}>
                             {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                                 <>
-                                    <CheckCircle2 className="w-5 h-5 mr-2" /> Approve Verification
+                                    <CheckCircle2 className="w-5 h-5 mr-2" /> Approve
                                 </>
                             )}
                         </Button>

@@ -51,6 +51,7 @@ model User {
   plan            UserPlan  @default(FREE)
   role            Role      @default(USER)
   isPublic        Boolean   @default(true) @map("is_public")
+  profileViews    Int       @default(0) @map("profile_views")
   
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
@@ -115,6 +116,7 @@ model Education {
   updatedAt    DateTime    @updatedAt @map("updated_at")
   
   user         User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationRequests VerificationRequest[]
 
   @@map("education")
 }
@@ -136,21 +138,30 @@ model WorkExperience {
   updatedAt   DateTime    @updatedAt @map("updated_at")
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  verificationRequests VerificationRequest[]
 
   @@map("work_experiences")
 }
 
 model VerificationRequest {
   id              String   @id @default(uuid())
-  certificationId String   @map("certification_id")
+  
+  // Target item (only one should be set)
+  certificationId String?  @map("certification_id")
+  educationId     String?  @map("education_id")
+  workExperienceId String? @map("work_experience_id")
+
   assignedAdminId String?  @map("assigned_admin_id")
   status          String   @default("QUEUED") // QUEUED, IN_REVIEW, COMPLETED
   notes           String?
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  certification   Certification @relation(fields: [certificationId], references: [id], onDelete: Cascade)
-  assignedAdmin   User?         @relation("AdminVerifier", fields: [assignedAdminId], references: [id])
+  certification   Certification?  @relation(fields: [certificationId], references: [id], onDelete: Cascade)
+  education       Education?      @relation(fields: [educationId], references: [id], onDelete: Cascade)
+  workExperience  WorkExperience? @relation(fields: [workExperienceId], references: [id], onDelete: Cascade)
+  
+  assignedAdmin   User?           @relation("AdminVerifier", fields: [assignedAdminId], references: [id])
 
   @@map("verification_requests")
 }
@@ -203,6 +214,7 @@ model Post {
   imageUrl  String?  @map("image_url")
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+  impressions Int      @default(0)
 
   repostId  String?  @map("repost_id")
   originalPost Post? @relation("Reposts", fields: [repostId], references: [id])

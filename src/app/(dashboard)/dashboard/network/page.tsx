@@ -111,6 +111,54 @@ export default function NetworkPage() {
                 </div>
             </FadeIn>
 
+            {/* Your Connections */}
+            {connections.length > 0 && (
+                <div>
+                    <div className="flex items-center justify-between mb-6 px-1">
+                        <h2 className="text-xl font-bold text-slate-900">Your Connections</h2>
+                    </div>
+
+                    <FadeInStagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                        {connections.map((user) => (
+                            <FadeInItem key={user.id} className="glass-card relative rounded-xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300 group bg-white">
+                                <div className="h-20 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-600 opacity-90 group-hover:opacity-100 transition-opacity"></div>
+                                <div className="absolute top-10 left-1/2 -translate-x-1/2">
+                                    <Link href={`/p/${user.id}`}>
+                                        <Avatar className="h-20 w-20 border-[4px] border-white shadow-md cursor-pointer transition-transform group-hover:scale-105">
+                                            <AvatarImage src={user.profilePhotoUrl} className="object-cover" />
+                                            <AvatarFallback className="text-xl bg-slate-100 text-slate-600 font-bold">
+                                                {user.firstName?.[0]}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                    </Link>
+                                </div>
+                                <div className="pt-14 pb-5 px-4 text-center flex flex-col h-full">
+                                    <Link href={`/p/${user.id}`} className="hover:underline decoration-emerald-500 underline-offset-2">
+                                        <h3 className="font-bold text-slate-900 truncate text-lg">
+                                            {user.firstName} {user.lastName}
+                                        </h3>
+                                    </Link>
+                                    <p className="text-xs text-slate-500 mt-1 line-clamp-2 min-h-[2.5em] leading-relaxed mb-4">
+                                        {user.headline || "Professional"}
+                                    </p>
+
+                                    <div className="mt-auto">
+                                        <Link href={`/p/${user.id}`} className="w-full">
+                                            <Button
+                                                className="w-full rounded-full bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 font-semibold transition-colors shadow-sm"
+                                                size="sm"
+                                            >
+                                                View Profile
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                </div>
+                            </FadeInItem>
+                        ))}
+                    </FadeInStagger>
+                </div>
+            )}
+
             {/* Suggestions */}
             <div>
                 <div className="flex items-center justify-between mb-6 px-1">

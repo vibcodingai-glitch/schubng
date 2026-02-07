@@ -11,6 +11,7 @@ import {
     Settings,
     LogOut,
     Shield,
+    ArrowLeftRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -44,7 +45,7 @@ const navItems = [
     },
 ];
 
-export function AdminSidebar() {
+export function AdminSidebar({ user }: { user?: any }) {
     const pathname = usePathname();
 
     return (
@@ -91,16 +92,31 @@ export function AdminSidebar() {
                 })}
             </div>
 
+            {/* Switch to User View */}
+            <div className="px-3 pb-2">
+                <Link
+                    href="/dashboard"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                >
+                    <ArrowLeftRight className="w-5 h-5" />
+                    <span className="font-medium">Switch to User View</span>
+                </Link>
+            </div>
+
             {/* User Info */}
             <div className="p-4 border-t border-slate-800">
                 <div className="flex items-center gap-3 mb-4 px-2">
                     <Avatar className="w-9 h-9 border border-slate-700">
-                        <AvatarImage src="https://github.com/shadcn.png" />
-                        <AvatarFallback className="bg-slate-800 text-slate-300">JA</AvatarFallback>
+                        <AvatarImage src={user?.profilePhotoUrl || undefined} />
+                        <AvatarFallback className="bg-slate-800 text-slate-300">
+                            {user?.firstName?.[0]}{user?.lastName?.[0]}
+                        </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
-                        <p className="text-sm font-medium text-white truncate">John Admin</p>
-                        <p className="text-xs text-slate-500 truncate">john@supplychainhub.com</p>
+                        <p className="text-sm font-medium text-white truncate">
+                            {user?.firstName} {user?.lastName}
+                        </p>
+                        <p className="text-xs text-slate-500 truncate">{user?.email}</p>
                     </div>
                 </div>
                 <Button variant="ghost" className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800 gap-2">

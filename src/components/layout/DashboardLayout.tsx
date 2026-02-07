@@ -22,7 +22,7 @@ export async function DashboardLayout({ children }: DashboardLayoutProps) {
             </main>
 
             {/* Mobile Bottom Navigation */}
-            <MobileBottomNav />
+            <MobileBottomNav user={user || undefined} />
         </div>
     );
 }
