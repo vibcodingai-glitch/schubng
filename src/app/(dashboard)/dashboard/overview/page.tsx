@@ -42,11 +42,14 @@ import { getSuggestedConnections, getUserTrustScoreBreakdown, getUserVerificatio
 import { redirect } from "next/navigation";
 import { TrustScoreCard } from "@/components/cards/TrustScoreCard";
 
+
 export default async function ProfilePage() {
     const data = await getDashboardData();
     if (!data) redirect("/login");
 
     const { user, stats, certifications, activity } = data;
+    if (!user) redirect("/login");
+
     const suggestions = await getSuggestedConnections();
     const trustScoreBreakdown = await getUserTrustScoreBreakdown();
     const verificationSummary = await getUserVerificationSummary();
@@ -84,10 +87,10 @@ export default async function ProfilePage() {
     };
 
     // Use real experience data from user
-    const userExperiences = user.workExperience || [];
+    const userExperiences = user?.workExperience || [];
 
     // Use real education data from user
-    const userEducation = user.education || [];
+    const userEducation = user?.education || [];
 
     return (
         <div className="grid grid-cols-12 gap-6">
