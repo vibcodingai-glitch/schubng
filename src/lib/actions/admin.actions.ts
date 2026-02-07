@@ -531,6 +531,7 @@ async function recalculateTrustScore(userId: string) {
     });
 }
 
+
 /**
  * Update user status (e.g. ban/unban via trust score)
  */
@@ -570,5 +571,225 @@ export async function updateUserStatus(userId: string, isBanned: boolean) {
     } catch (error) {
         console.error("Error updating user status:", error);
         return { error: "Failed to update user status" };
+    }
+}
+
+/**
+ * Fetch a single user by ID for admin details view
+ */
+export async function getUserById(userId: string) {
+    const supabase = await createClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    if (!authUser) {
+        return null;
+    }
+
+    // Verify current user is an admin
+    const currentUser = await prisma.user.findUnique({
+        where: { id: authUser.id },
+        select: { role: true }
+    });
+
+    if (currentUser?.role !== "ADMIN") {
+        return null;
+    }
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                certifications: { orderBy: { issueDate: 'desc' } },
+                education: { orderBy: { startYear: 'desc' } },
+                workExperience: { orderBy: { startDate: 'desc' } },
+                transactions: { orderBy: { createdAt: 'desc' }, take: 10 },
+                activityLogs: { orderBy: { createdAt: 'desc' }, take: 20 }
+            }
+        });
+
+        if (!user) return null;
+
+        return {
+            ...user,
+            location: user.location,
+            phone: user.phone,
+            headline: user.headline,
+            role: user.role
+        };
+    } catch (error) {
+        console.error("Error fetching user by ID:", error);
+        return null;
+    }
+}
+
+/**
+ * Fetch a single verification request by ID
+ */
+export async function getVerificationRequestById(requestId: string) {
+    const supabase = await createClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    if (!authUser) {
+        return null;
+    }
+
+    // Verify current user is an admin
+    const currentUser = await prisma.user.findUnique({
+        where: { id: authUser.id },
+        select: { role: true }
+    });
+
+    if (currentUser?.role !== "ADMIN") {
+        return null;
+    }
+
+    try {
+        const request = await prisma.verificationRequest.findUnique({
+            where: { id: requestId },
+            include: {
+                certification: { include: { user: true } },
+                education: { include: { user: true } },
+                workExperience: { include: { user: true } },
+                assignedAdmin: true
+            }
+        });
+
+        if (!request) return null;
+
+        const target = request.certification || request.education || request.workExperience;
+        const user = target?.user;
+
+        return {
+            id: request.id,
+            status: request.status,
+            createdAt: request.createdAt,
+            updatedAt: request.updatedAt,
+            notes: request.notes,
+            admin: request.assignedAdmin ? `${request.assignedAdmin.firstName} ${request.assignedAdmin.lastName}` : 'Unassigned',
+            user: user ? {
+                id: user.id,
+                name: `${user.firstName} ${user.lastName}`,
+                email: user.email,
+                image: user.profilePhotoUrl
+            } : null,
+            item: target ? {
+                id: target.id,
+                type: request.certificationId ? 'certification' : request.educationId ? 'education' : 'workExperience',
+                title: request.certification?.title || request.education?.institution || request.workExperience?.company,
+                subtitle: request.certification?.issuingOrganization || request.education?.degree || request.workExperience?.role,
+                description: request.certification?.credentialId || request.education?.fieldOfStudy || request.workExperience?.description,
+                documentUrl: target.documentUrl,
+                status: target.status
+            } : null
+        };
+    } catch (error) {
+        console.error("Error fetching verification request:", error);
+        return null;
+    }
+}
+
+/**
+ * Update verification request status
+ */
+export async function updateVerificationStatus(
+    requestId: string,
+    status: 'VERIFIED' | 'REJECTED',
+    notes?: string
+) {
+    const supabase = await createClient();
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+
+    if (!authUser) {
+        throw new Error("Unauthorized");
+    }
+
+    // Verify current user is an admin
+    const currentUser = await prisma.user.findUnique({
+        where: { id: authUser.id },
+        select: { role: true }
+    });
+
+    if (currentUser?.role !== "ADMIN") {
+        throw new Error("Permission denied");
+    }
+
+    try {
+        const request = await prisma.verificationRequest.findUnique({
+            where: { id: requestId },
+            include: {
+                certification: true,
+                education: true,
+                workExperience: true
+            }
+        });
+
+        if (!request) {
+            throw new Error("Request not found");
+        }
+
+        // Update VerificationRequest status
+        await prisma.verificationRequest.update({
+            where: { id: requestId },
+            data: {
+                status: status === 'VERIFIED' ? 'COMPLETED' : 'REJECTED',
+                notes,
+                assignedAdminId: authUser.id,
+                updatedAt: new Date()
+            }
+        });
+
+        // Determine item type and ID
+        let type: 'certification' | 'education' | 'workExperience';
+        let itemId: string;
+        let userId: string = "";
+
+        if (request.certificationId) {
+            type = 'certification';
+            itemId = request.certificationId;
+            userId = request.certification?.userId || "";
+        } else if (request.educationId) {
+            type = 'education';
+            itemId = request.educationId;
+            userId = request.education?.userId || "";
+        } else if (request.workExperienceId) {
+            type = 'workExperience';
+            itemId = request.workExperienceId;
+            userId = request.workExperience?.userId || "";
+        } else {
+            throw new Error("Invalid request type");
+        }
+
+        // Update item status
+        const itemStatus = status === 'VERIFIED' ? 'VERIFIED' : 'REJECTED';
+        const itemUpdateData: any = { status: itemStatus };
+
+        if (status === 'VERIFIED') {
+            itemUpdateData.verifiedAt = new Date();
+        } else {
+            itemUpdateData.rejectionReason = notes;
+            itemUpdateData.verifiedAt = null;
+        }
+
+        if (type === 'certification') {
+            await prisma.certification.update({ where: { id: itemId }, data: itemUpdateData });
+        } else if (type === 'education') {
+            await prisma.education.update({ where: { id: itemId }, data: itemUpdateData });
+        } else if (type === 'workExperience') {
+            await prisma.workExperience.update({ where: { id: itemId }, data: itemUpdateData });
+        }
+
+        // Recalculate trust score if verified
+        if (userId && status === 'VERIFIED') {
+            await recalculateTrustScore(userId);
+        }
+
+        revalidatePath("/admin/verifications");
+        revalidatePath(`/admin/verifications/${requestId}`);
+        if (userId) revalidatePath(`/admin/users/${userId}`);
+
+        return { success: true };
+    } catch (error) {
+        console.error("Error updating verification status:", error);
+        throw new Error("Failed to update verification status");
     }
 }
