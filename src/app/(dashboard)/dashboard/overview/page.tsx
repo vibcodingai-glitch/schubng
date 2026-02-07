@@ -53,12 +53,12 @@ export default async function ProfilePage() {
 
     // Profile completion checklist
     const completionItems = [
-        { label: "Basic information added", completed: !!(user.firstName && user.lastName) },
-        { label: "Profile photo uploaded", completed: !!user.profilePhotoUrl },
-        { label: "Professional summary", completed: !!user.summary },
-        { label: "Certifications added", completed: stats.totalCerts > 0 },
-        { label: "At least one verified certification", completed: stats.verifiedCerts > 0 },
-        { label: "Work experience added", completed: !!user.currentRole },
+        { label: "Basic information added", completed: !!(user?.firstName && user?.lastName) },
+        { label: "Profile photo uploaded", completed: !!user?.profilePhotoUrl },
+        { label: "Professional summary", completed: !!user?.summary },
+        { label: "Certifications added", completed: (stats?.totalCerts || 0) > 0 },
+        { label: "At least one verified certification", completed: (stats?.verifiedCerts || 0) > 0 },
+        { label: "Work experience added", completed: !!user?.currentRole },
     ];
 
     const profileCompletionPercentage = Math.round(
